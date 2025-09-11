@@ -31,7 +31,7 @@ class MetrexProcessor:
         except ValueError as e:
             raise ValueError(f"Invalid date format in timerange. Expected 'YYYYMMDD-YYYYMMDD': {e}")
         
-        if start_date >= end_date:
+        if start_date > end_date:
             raise ValueError(f"Start date must be before end date in timerange: {timerange}")
         
         return start_date, end_date

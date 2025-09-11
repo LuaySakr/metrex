@@ -81,21 +81,24 @@ class MetrexProcessor:
     def _filter_by_timerange(self, data: Dict[str, pd.DataFrame], timerange: str) -> Dict[str, pd.DataFrame]:
         """Filter data by the specified timerange."""
         start_date, end_date = self._parse_timerange(timerange)
-        
+        # Convert to UTC-aware datetimes for comparison
+        start_date = pd.Timestamp(start_date).tz_localize('UTC')
+        end_date = pd.Timestamp(end_date).tz_localize('UTC')
+
         filtered_data = {}
         for symbol, df in data.items():
             # Filter data within the timerange
             mask = (df.index >= start_date) & (df.index <= end_date)
             filtered_df = df.loc[mask]
-            
+
             if not filtered_df.empty:
                 filtered_data[symbol] = filtered_df
             else:
                 print(f"Warning: No data for {symbol} in timerange {timerange}")
-        
+
         if not filtered_data:
             raise ValueError(f"No data found for any symbols in timerange {timerange}")
-        
+
         return filtered_data
     
     def _calculate_sma(self, prices: pd.Series, window: int = 50) -> pd.Series:

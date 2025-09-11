@@ -2,68 +2,35 @@
 CLI interface for metrex.
 """
 
+
 import click
-import sys
 from pathlib import Path
-from typing import Optional
+from .processor import process
+from .metrics import all_names
 
-from .core import MetrexProcessor
+@click.group()
+def cli():
+    pass
 
-
-@click.command()
-@click.option(
-    '--datafolder',
-    required=True,
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
-    help='Path to directory containing Freqtrade .feather candle files'
-)
-@click.option(
-    '--timeframe',
-    required=True,
-    type=str,
-    help='Timeframe to filter by (e.g., 1h, 4h, 1d)'
-)
-@click.option(
-    '--timerange',
-    required=True,
-    type=str,
-    help='Time range to filter by (e.g., 20230101-20231231)'
-)
-@click.option(
-    '--output',
-    required=True,
-    type=click.Path(path_type=Path),
-    help='Output path for results .feather file'
-)
-def main(datafolder: Path, timeframe: str, timerange: str, output: Path) -> None:
+@cli.command()
+@click.option('--datafolder', required=True, type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path))
+@click.option('--timeframe', required=True, type=str)
+@click.option('--timerange', required=True, type=str)
+@click.option('--metrics', required=False, type=str, help='Comma-separated metric names')
+@click.option('--all-metrics', is_flag=True, help='Run all metrics in registry')
+@click.option('--output', required=True, type=click.Path(path_type=Path))
+def metrics(datafolder, timeframe, timerange, metrics, all_metrics, output):
     """
-    Metrex: Load Freqtrade candles, compute market metrics, and save results.
-    
-    Computes breadth_above_sma_50, market_vol_regime, and btc_trend_slope metrics
-    from Freqtrade .feather candle data.
+    Run selected market metrics and save results.
     """
-    try:
-        # Initialize processor
-        processor = MetrexProcessor(datafolder)
-        
-        # Load and process data
-        click.echo(f"Loading data from {datafolder}")
-        click.echo(f"Filtering by timeframe: {timeframe}")
-        click.echo(f"Filtering by timerange: {timerange}")
-        
-        # Process the data
-        results = processor.process(timeframe, timerange)
-        
-        # Save results
-        click.echo(f"Saving results to {output}")
-        processor.save_results(results, output)
-        
-        click.echo("✅ Processing completed successfully!")
-        
-    except Exception as e:
-        click.echo(f"❌ Error: {str(e)}", err=True)
-        sys.exit(1)
-
+    if all_metrics:
+        metric_names = all_names()
+    else:
+        if not metrics:
+            raise click.UsageError('Specify --metrics or --all-metrics')
+        metric_names = [m.strip() for m in metrics.split(',')]
+    process(datafolder, timeframe, timerange, metric_names, output)
+    click.echo(f"✅ Metrics computed: {', '.join(metric_names)}\nSaved to {output}")
 
 if __name__ == '__main__':
-    main()
+    cli()

@@ -33,11 +33,18 @@ metrex --datafolder <path> --timeframe <tf> --timerange <range> --output <file>
 ### Example
 
 ```bash
-# Process 1-hour candles for Q2 2023
-metrex --datafolder ./data/candles \
+# Process 1-hour candles
+metrex rank --datafolder ./data/candles \
        --timeframe 1h \
-       --timerange 20230401-20230630 \
-       --output ./results/Q2_2023_metrics.feather
+       --timerange yyyyMMdd-yyyyMMdd \
+       --outputfolder ".\results"
+
+metrex metrics --datafolder ./data/candles \
+       --timeframe 1h \
+       --timerange yyyyMMdd-yyyyMMdd \
+       --output ./results/market_metrics.feather
+
+python -c "import pandas as pd; df = pd.read_feather('results/filename.feather'); df.to_csv('results/filename.csv', index=False);"
 ```
 
 ## Input Data Format

@@ -5,7 +5,7 @@ CLI interface for metrex.
 
 import click
 from pathlib import Path
-from .processor import process
+from .processor import process, rank_pairs
 from .metrics import all_names
 
 @click.group()
@@ -34,3 +34,13 @@ def metrics(datafolder, timeframe, timerange, metrics, all_metrics, output):
 
 if __name__ == '__main__':
     cli()
+
+@cli.command()
+@click.option('--datafolder', required=True, type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path))
+@click.option('--timeframe', required=True, type=str)
+@click.option('--timerange', required=True, type=str)
+@click.option('--outputfolder', required=True, type=click.Path(path_type=Path))
+def rank(datafolder, timeframe, timerange, outputfolder):
+    """Generate per-pair ranked metrics and write one feather per pair."""
+    rank_pairs(datafolder, timeframe, timerange, outputfolder)
+    click.echo(f"✅ Rank files written to {outputfolder}")

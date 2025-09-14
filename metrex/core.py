@@ -255,6 +255,6 @@ class MetrexProcessor:
         
         # Reset index to make timestamp a column for feather format
         results_to_save = results.reset_index()
-        results_to_save.to_feather(output_path)
+        results_to_save.to_feather(output_path, compression_level=9, compression="lz4")
         
         print(f"Results saved with {len(results)} rows and {len(results.columns)} columns")

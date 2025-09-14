@@ -26,7 +26,7 @@ def load_feathers(datafolder: Path, timeframe: str) -> pd.DataFrame:
 def save(df: pd.DataFrame, output_path: Path):
     ext = str(output_path).split('.')[-1]
     if ext == 'feather':
-        df.reset_index(drop=True).to_feather(output_path)
+        df.reset_index(drop=True).to_feather(output_path, compression_level=9, compression="lz4")
     elif ext == 'parquet':
         df.reset_index(drop=True).to_parquet(output_path)
     elif ext == 'csv':

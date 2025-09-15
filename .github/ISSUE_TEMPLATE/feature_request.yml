@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose an enhancement or new capability
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us understand the problem you’re trying to solve and the solution you’d like.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What’s the problem or use case?
+      placeholder: I want to compute X metric to support Y strategy decision...
+      validations:
+        required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What do you want metrex to do? CLI, outputs, columns, etc.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and acceptance criteria
+      description: Definition of done, expected columns, performance constraints, tests.
+  - type: input
+    id: metrics
+    attributes:
+      label: Related metrics or modules
+      placeholder: e.g., metrex/metrics/market_vol_regime.py
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+

@@ -140,3 +140,7 @@ Metrex includes comprehensive error handling for:
 - pyarrow >= 5.0.0
 - numpy >= 1.21.0
 - click >= 8.0.0
+
+## Contributing
+
+See `CONTRIBUTING.md` for setup, coding guidelines, and how to add new metrics. Issue and PR templates are available under `.github/`.

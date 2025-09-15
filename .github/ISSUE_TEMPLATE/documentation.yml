@@ -1,0 +1,24 @@
+name: Documentation
+description: Report a gap or request an improvement in docs
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Location / page
+      placeholder: README.md / CONTRIBUTING.md / CLI help
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior or text
+  - type: textarea
+    id: desired
+    attributes:
+      label: Desired change
+      validations:
+        required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context / examples
+

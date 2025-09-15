@@ -20,7 +20,20 @@ pip install -e .
 ## Usage
 
 ```bash
-metrex --datafolder <path> --timeframe <tf> --timerange <range> --output <file>
+# Market-level metrics
+metrex metrics --datafolder <path> --timeframe <tf> --timerange <range> \
+               --metrics <name1,name2,...> --output <file>
+
+# Or run all registered metrics
+metrex metrics --datafolder <path> --timeframe <tf> --timerange <range> \
+               --all-metrics --output <file>
+
+# Per-pair ranking rolls (one feather per pair)
+metrex rank --datafolder <path> --timeframe <tf> --timerange <range> \
+            --outputfolder <dir>
+
+# List available metric names
+metrex list
 ```
 
 ### Arguments
@@ -37,14 +50,15 @@ metrex --datafolder <path> --timeframe <tf> --timerange <range> --output <file>
 metrex rank --datafolder ./data/candles \
        --timeframe 1h \
        --timerange yyyyMMdd-yyyyMMdd \
-       --outputfolder ".\results"
+       --outputfolder ./results
 
 metrex metrics --datafolder ./data/candles \
        --timeframe 1h \
        --timerange yyyyMMdd-yyyyMMdd \
+       --all-metrics \
        --output ./results/market_metrics.feather
 
-python -c "import pandas as pd; df = pd.read_feather('results/filename.feather'); df.to_csv('results/filename.csv', index=False);"
+python -c "import pandas as pd; df = pd.read_feather('./results/market_metrics.feather'); df.to_csv('./results/market_metrics.csv', index=False)"
 ```
 
 ## Input Data Format
@@ -69,16 +83,33 @@ Each file should contain OHLCV data with columns:
 
 ## Output Format
 
-Results are saved as a `.feather` file containing:
+Results are saved as a `.feather` file containing a `date` column plus the
+columns produced by the selected metrics. Examples include:
 
 | Column | Description |
 |--------|-------------|
-| `timestamp` | DateTime index |
 | `breadth_above_sma_50` | Percentage (0-100) of symbols above SMA50 |
 | `market_vol_regime` | Volatility regime: 'low', 'medium', or 'high' |
+| `vol_zscore` | Z-score of BTC realized volatility |
 | `btc_trend_slope` | BTC trend slope from 20-period linear regression |
+| `avg_corr_btc` | Cross-sectional average corr to BTC (rolling 50) |
+| `new_highs_50` / `new_lows_50` | Count of new 50-period highs/lows |
+| `mkt_ret` / `mkt_ret_sma20` | Mean market return and its 20SMA |
 
 ## Metrics Details
+
+### Available Metrics
+
+These names can be listed with `metrex list` and used with `--metrics`:
+
+- breadth_sma50: Emits `breadth_above_sma_50` (% above 50SMA)
+- market_vol_regime: Emits `market_vol_regime`, `vol_zscore`
+- btc_trend_slope: Emits `btc_trend_slope`
+- adv_decline: Emits `adv_count`, `decl_count`, `adv_decline_diff`, `adv_decline_line`
+- new_highs_lows: Emits `new_highs_50`, `new_lows_50`
+- volume_surge_ratio: Emits `volume_surge_ratio`
+- avg_correlation_btc: Emits `avg_corr_btc`
+- market_return_ma: Emits `mkt_ret`, `mkt_ret_sma20`
 
 ### Breadth Above SMA 50
 Calculates the percentage of symbols trading above their 50-period Simple Moving Average at each timestamp. Values range from 0% to 100%, providing insight into overall market strength.

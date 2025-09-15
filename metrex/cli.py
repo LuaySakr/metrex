@@ -44,3 +44,12 @@ def rank(datafolder, timeframe, timerange, outputfolder):
     """Generate per-pair ranked metrics and write one feather per pair."""
     rank_pairs(datafolder, timeframe, timerange, outputfolder)
     click.echo(f"✅ Rank files written to {outputfolder}")
+
+@cli.command(name='list')
+def list_metrics():
+    """List available metric names in the registry."""
+    names = all_names()
+    if not names:
+        click.echo("No metrics registered.")
+    else:
+        click.echo("Available metrics:\n- " + "\n- ".join(names))

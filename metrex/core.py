@@ -1,5 +1,6 @@
 """
-Core processing logic for metrex metrics.
+Legacy core processing (not used by the current CLI).
+See `metrex/processor.py` for the active pipeline.
 """
 
 import pandas as pd

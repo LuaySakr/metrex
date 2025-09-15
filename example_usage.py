@@ -34,10 +34,11 @@ def run_metrex_example():
     
     # Build command
     cmd = [
-        "metrex",
+        "metrex", "metrics",
         "--datafolder", data_folder,
         "--timeframe", timeframe,
         "--timerange", timerange,
+        "--all-metrics",
         "--output", output_file
     ]
     

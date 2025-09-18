@@ -2,7 +2,7 @@
 Processor orchestrates: load -> filter -> run metrics -> merge -> save
 """
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 from .io import load_feathers, save
 from .timeutils import filter_timerange
@@ -28,6 +28,12 @@ def process(datafolder: Path, timeframe: str, timerange: str, metric_names: List
     result = run_metrics(df, metric_names, ctx)
     save(result, output)
 
+def _parse_timerange_bounds(timerange: str) -> Tuple[str, str]:
+    """Return raw start,end strings (may include 'latest')."""
+    if '-' not in timerange:
+        raise ValueError(f"Invalid timerange format: {timerange}")
+    return tuple(timerange.split('-', 1))  # type: ignore
+
 def rank_pairs(datafolder: Path, timeframe: str, timerange: str, outputfolder: Path) -> None:
     """Generate per-pair feather files with cross-sectional ranks and stats.
 
@@ -45,9 +51,77 @@ def rank_pairs(datafolder: Path, timeframe: str, timerange: str, outputfolder: P
     outputfolder = Path(outputfolder)
     outputfolder.mkdir(parents=True, exist_ok=True)
 
-    # Load and filter market data
-    df = load_market(Path(datafolder), timeframe)
-    df = filter_timerange(df, timerange)
+    # Determine timerange handling (supports 'latest-YYYYMMDD')
+    start_raw, end_raw = _parse_timerange_bounds(timerange)
+    df_all = load_market(Path(datafolder), timeframe)
+
+    # If start_raw == 'latest', we will compute per-pair dynamic start dates based on existing outputs.
+    use_latest = start_raw.lower() == 'latest'
+    end_bound = end_raw
+
+    # Precompute parsed end timestamp (timezone-naive normalized to UTC at midnight)
+    end_ts = pd.to_datetime(end_bound, format='%Y%m%d')
+    end_ts = end_ts.tz_localize('UTC') if end_ts.tzinfo is None else end_ts
+
+    # Normalize date column
+    df_all['date'] = pd.to_datetime(df_all['date'])
+    # If any rows are tz-aware, convert all to UTC; else localize to UTC for uniformity
+    if df_all['date'].dt.tz is not None:
+        df_all['date'] = df_all['date'].dt.tz_convert('UTC')
+    else:
+        df_all['date'] = df_all['date'].dt.tz_localize('UTC')
+
+    # Build per-pair start date map
+    pair_start_map: Dict[str, pd.Timestamp] = {}
+    lookback_hours = 24
+    lookback_delta = pd.Timedelta(hours=lookback_hours)
+    if use_latest:
+        # For each pair, inspect existing output file (if any) to find last date
+        for pair in df_all['pair'].unique():
+            out_file = outputfolder / f"{pair}-{timeframe}.feather"
+            if out_file.exists():
+                try:
+                    existing = pd.read_feather(out_file)
+                    if 'date' not in existing.columns or existing.empty:
+                        continue
+                    existing['date'] = pd.to_datetime(existing['date'])
+                    # Normalize existing to UTC
+                    if existing['date'].dt.tz is None:
+                        existing['date'] = existing['date'].dt.tz_localize('UTC')
+                    else:
+                        existing['date'] = existing['date'].dt.tz_convert('UTC')
+                    last_date = existing['date'].max()
+                    # Start from (last_date - lookback) to compute correct rolling metrics; we'll drop <= last_date later
+                    pair_start_map[pair] = last_date - lookback_delta
+                except Exception:
+                    continue
+        # If file missing, we set later to first available date per pair
+    else:
+        start_ts = pd.to_datetime(start_raw, format='%Y%m%d')
+        start_ts = start_ts.tz_localize('UTC') if start_ts.tzinfo is None else start_ts
+        for pair in df_all['pair'].unique():
+            pair_start_map[pair] = start_ts
+
+    # Filter df_all into df respecting per-pair starts
+    filtered_frames = []
+    for pair, g in df_all.groupby('pair'):
+        if use_latest:
+            start_ts = pair_start_map.get(pair)
+            if start_ts is None:
+                start_ts = g['date'].min()
+                pair_start_map[pair] = start_ts
+        else:
+            start_ts = pair_start_map[pair]
+        # Ensure same tz
+        if start_ts.tzinfo is None:
+            start_ts = start_ts.tz_localize('UTC')
+        mask = (g['date'] >= start_ts) & (g['date'] <= end_ts)
+        sub = g.loc[mask]
+        if not sub.empty:
+            filtered_frames.append(sub)
+    if not filtered_frames:
+        return  # Nothing new to process
+    df = pd.concat(filtered_frames, ignore_index=True)
 
     if df.empty:
         raise ValueError("No data after filtering by timerange.")
@@ -55,6 +129,8 @@ def rank_pairs(datafolder: Path, timeframe: str, timerange: str, outputfolder: P
     # Ensure proper dtypes and sorting
     df = df.copy()
     df['date'] = pd.to_datetime(df['date'])
+    if df['date'].dt.tz is None:
+        df['date'] = df['date'].dt.tz_localize('UTC')
     df = df.sort_values(['date', 'pair']).reset_index(drop=True)
 
     # pairsCount per date
@@ -97,7 +173,45 @@ def rank_pairs(datafolder: Path, timeframe: str, timerange: str, outputfolder: P
     ]
     df = df[out_cols]
 
-    # Write per-pair outputs
+    # Write per-pair outputs (append logic, avoiding duplicates)
     for pair, g in df.groupby('pair'):
         out_path = outputfolder / f"{pair}-{timeframe}.feather"
-        save(g.drop(columns=['pair']), out_path)
+        g_out = g.drop(columns=['pair']).copy()
+        # If latest mode with existing file, drop rows with date <= last existing date
+        if use_latest:
+            existing_last: Optional[pd.Timestamp] = None
+            if (pair in pair_start_map) and (pair_start_map[pair] is not None):
+                # pair_start_map[pair] stored (last_existing - lookback) for latest case, so recover last_existing
+                existing_last = pair_start_map[pair] + lookback_delta
+            if existing_last is not None:
+                g_out = g_out[g_out['date'] > existing_last]
+                if g_out.empty:
+                    continue
+        if out_path.exists():
+            try:
+                existing = pd.read_feather(out_path)
+                if 'date' in existing.columns:
+                    existing['date'] = pd.to_datetime(existing['date'])
+                    if existing['date'].dt.tz is None:
+                        existing['date'] = existing['date'].dt.tz_localize('UTC')
+                    else:
+                        existing['date'] = existing['date'].dt.tz_convert('UTC')
+                    g_out['date'] = pd.to_datetime(g_out['date'])
+                    if g_out['date'].dt.tz is None:
+                        g_out['date'] = g_out['date'].dt.tz_localize('UTC')
+                    else:
+                        g_out['date'] = g_out['date'].dt.tz_convert('UTC')
+                    # Exclude any rows in g_out with dates already present
+                    existing_dates = set(existing['date'].astype('int64'))
+                    g_out = g_out[~g_out['date'].astype('int64').isin(existing_dates)]
+                    if g_out.empty:
+                        continue
+                    combined = pd.concat([existing, g_out], ignore_index=True)
+                    combined = combined.drop_duplicates(subset=['date']).sort_values('date')
+                else:
+                    combined = g_out
+            except Exception:
+                combined = g_out
+            save(combined, out_path)
+        else:
+            save(g_out, out_path)

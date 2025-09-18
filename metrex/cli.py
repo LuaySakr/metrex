@@ -41,9 +41,16 @@ if __name__ == '__main__':
 @click.option('--timerange', required=True, type=str)
 @click.option('--outputfolder', required=True, type=click.Path(path_type=Path))
 def rank(datafolder, timeframe, timerange, outputfolder):
-    """Generate per-pair ranked metrics and write one feather per pair."""
-    rank_pairs(datafolder, timeframe, timerange, outputfolder)
-    click.echo(f"✅ Rank files written to {outputfolder}")
+        """Generate/append per-pair ranked metrics (no duplicate dates).
+
+        Behavior:
+        - If output files exist, new rows are appended; existing dates are not duplicated.
+        - Timerange supports special form 'latest-YYYYMMDD' where the start date is
+            taken as the last date already present in each pair's output (or the first
+            available input date if the output file does not yet exist).
+        """
+        rank_pairs(datafolder, timeframe, timerange, outputfolder)
+        click.echo(f"✅ Rank files written to {outputfolder}")
 
 @cli.command(name='list')
 def list_metrics():

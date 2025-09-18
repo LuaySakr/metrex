@@ -40,7 +40,7 @@ metrex list
 
 - `--datafolder`: Directory containing Freqtrade `.feather` candle files
 - `--timeframe`: Timeframe to filter by (e.g., `1h`, `4h`, `1d`)
-- `--timerange`: Time range in format `YYYYMMDD-YYYYMMDD` (e.g., `20230101-20231231`)
+- `--timerange`: Time range in format `YYYYMMDD-YYYYMMDD`|`latest-YYYYMMDD` (e.g., `20230101-20231231`, `latest-20231231`), in case of sending `latest` instead of the start date, the system shall use the end date from the corresponding output file, if the corresponding file does not exist, the system shall use the start date from the input file.
 - `--output`: Output path for results `.feather` file
 
 ### Example
@@ -50,6 +50,11 @@ metrex list
 metrex rank --datafolder ./data/candles \
        --timeframe 1h \
        --timerange yyyyMMdd-yyyyMMdd \
+       --outputfolder ./results
+
+metrex rank --datafolder ./data/candles \
+       --timeframe 1m \
+       --timerange latest-yyyyMMdd \
        --outputfolder ./results
 
 metrex metrics --datafolder ./data/candles \

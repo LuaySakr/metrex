@@ -1,13 +1,28 @@
 # metrex
-External market metrics for trading strategies — breadth, volatility, and trend context from your local data.
+External market metrics for trading strategies — breadth, volatility, and trend context from your local data **or live exchange data**.
 
 ## Overview
 
-Metrex is a Python CLI tool that processes Freqtrade `.feather` candle data to compute essential market metrics for trading strategies. It filters data by timeframe and timerange, then calculates three key metrics:
+Metrex is a Python CLI tool that computes essential market metrics for trading strategies. It supports two modes:
+
+1. **Offline Mode** (original): Process Freqtrade `.feather` candle data from local files
+2. **Live Mode** (NEW): Fetch real-time OHLCV data from exchanges via CCXT
+
+Key metrics include:
 
 - **breadth_above_sma_50**: Percentage of symbols trading above their 50-period Simple Moving Average
 - **market_vol_regime**: Market volatility regime classification (high/medium/low)
 - **btc_trend_slope**: Bitcoin trend slope using 20-period linear regression
+- And more! (See [Metrics Details](#metrics-details))
+
+### 🆕 What's New: Live Data Mode
+
+You can now run all commands with live data from Binance and other exchanges:
+- `metrex metrics --live --symbols BTC/USDT,ETH/USDT --timeframe 1m --interval 60`
+- `metrex rank --live --symbols BTC/USDT,ETH/USDT --timeframe 1m --interval 120`
+- `metrex live --symbols BTC/USDT,ETH/USDT,XRP/USDT --timeframe 1m --interval 60`
+
+**[📖 Read the full Live Mode Documentation →](LIVE_MODE.md)**
 
 ## Installation
 
@@ -17,7 +32,9 @@ Install metrex directly from the repository:
 pip install -e .
 ```
 
-## Usage
+## Quick Start
+
+### Offline Mode (Local Data)
 
 ```bash
 # Market-level metrics
@@ -35,6 +52,24 @@ metrex rank --datafolder <path> --timeframe <tf> --timerange <range> \
 # List available metric names
 metrex list
 ```
+
+### Live Mode (Exchange Data)
+
+```bash
+# Fetch live data and compute metrics continuously
+metrex metrics --live --symbols BTC/USDT,ETH/USDT --timeframe 1m \
+               --interval 60 --all-metrics --output live_metrics.feather
+
+# Compute rankings on live data
+metrex rank --live --symbols BTC/USDT,ETH/USDT --timeframe 1m \
+            --interval 120 --outputfolder live_ranks
+
+# Combined mode: metrics + rankings in one command
+metrex live --symbols BTC/USDT,ETH/USDT,XRP/USDT --timeframe 1m \
+            --interval 60 --all-metrics
+```
+
+**[📖 Full Live Mode Guide →](LIVE_MODE.md)**
 
 ### Arguments
 
@@ -145,6 +180,7 @@ Metrex includes comprehensive error handling for:
 - pyarrow >= 5.0.0
 - numpy >= 1.21.0
 - click >= 8.0.0
+- ccxt >= 4.0.0 (for live mode)
 
 ## Contributing
 

@@ -16,6 +16,7 @@ dependencies = [
     "pyarrow>=5.0.0",
     "numpy>=1.21.0",
     "click>=8.0.0",
+    "ccxt>=4.0.0",
 ]
 requires-python = ">=3.8"
 

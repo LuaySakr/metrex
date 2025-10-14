@@ -148,4 +148,29 @@ Metrex includes comprehensive error handling for:
 
 ## Contributing
 
+
+## Market Conditions Extraction
+
+After generating metrics, you can extract market conditions (boolean/composite states) using the CLI:
+
+```bash
+# 1. Generate metrics (if not already done)
+python -m metrex metrics --output results/2025metrics.feather
+
+# 2. Generate market conditions (compressed format)
+python -m metrex conditions --metrics-file results/2025metrics.feather --output results/market_conditions_mc.feather
+
+# 3. (Optional) Output as wide boolean table
+python -m metrex conditions --metrics-file results/2025metrics.feather --output results/market_conditions_mc_wide.feather --wide
+
+# 4. Preview output
+python -c "import pandas as pd; print(pd.read_feather('results/market_conditions_mc.feather').head())"
+```
+
+- The compressed output contains a string of active condition IDs (e.g., `mc1_mc5_mc32`) per row.
+- The `--wide` flag outputs a boolean table with one column per condition.
+- Use `--help` for more CLI options (filtering, stats, etc).
+
+This enables large-scale, automated extraction of market conditions for research and strategy development.
+
 See `CONTRIBUTING.md` for setup, coding guidelines, and how to add new metrics. Issue and PR templates are available under `.github/`.

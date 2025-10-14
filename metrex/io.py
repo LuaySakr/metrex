@@ -33,3 +33,13 @@ def save(df: pd.DataFrame, output_path: Path):
         df.to_csv(output_path, index=False)
     else:
         raise ValueError(f"Unknown output format: {ext}")
+
+def read_metrics(path: Path) -> pd.DataFrame:
+    ext = path.suffix.lower()
+    if ext == '.feather':
+        return pd.read_feather(path)
+    if ext == '.parquet':
+        return pd.read_parquet(path)
+    if ext == '.csv':
+        return pd.read_csv(path)
+    raise ValueError(f"Unsupported metrics file extension: {ext}")
